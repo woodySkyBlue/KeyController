@@ -1,0 +1,8 @@
+Chrome_WidgetWin_1
+187,2,1,39,0,     Ctrl+; -> VK_RIGHT
+72,2,1,37,0,      Ctrl+H -> VK_LEFT
+74,2,1,40,0,      Ctrl+J -> VK_DOWN
+85,2,1,38,0,      Ctrl+U -> VK_UP
+82,2,1,72,2,      Ctrl+R -> Ctrl+H（置換）
+72,3,1,36,0,      Ctrl+Shift+H -> VK_HOME
+187,3,1,35,0,     Ctrl+Shift+; -> VK_END
