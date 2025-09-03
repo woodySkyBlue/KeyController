@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{2BF58A6E-7525-4EF2-8A25-3520ECEE3BC1}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="DLL\KeyHook.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="KeyController\KeyController.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="KeyHook">
+        <MSBuild Projects="DLL\KeyHook.dproj"/>
+    </Target>
+    <Target Name="KeyHook:Clean">
+        <MSBuild Projects="DLL\KeyHook.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="KeyHook:Make">
+        <MSBuild Projects="DLL\KeyHook.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="KeyController">
+        <MSBuild Projects="KeyController\KeyController.dproj"/>
+    </Target>
+    <Target Name="KeyController:Clean">
+        <MSBuild Projects="KeyController\KeyController.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="KeyController:Make">
+        <MSBuild Projects="KeyController\KeyController.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="KeyHook;KeyController"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="KeyHook:Clean;KeyController:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="KeyHook:Make;KeyController:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
