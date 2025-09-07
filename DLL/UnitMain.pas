@@ -147,14 +147,16 @@ begin
   Result := 0;
   if MapFileMemory(LMapWnd, LpMap, MAP_KEY_NAME) = 0 then begin
     ProcLoadKeyAppListFromMemMappedFile;
-    var FBinary := ProcIntToBinaryGrouped(lPar);
+    //var FBinary := ProcIntToBinaryGrouped(lPar);
     //WriteDebugLogFile('C:\temp\log.txt', Format('%s %3d %11d %s', [FormatDateTime('hh:ss.zzz', Now), wPar, lPar, FBinary]));
-    WriteDebugLogStream(Format('%3d %11d %s', [wPar, lPar, FBinary]));
-    Result := CallNextHookEx(pHookInfo(LpMap)^.HookKeyHandle, nCode, wPar, lPar);
-    if FKeyApplicationList.KeyConvert(nCode, wPar, lPar) then begin
+    //WriteDebugLogStream(Format('%3d %11d %s', [wPar, lPar, FBinary]));
+    //Result := CallNextHookEx(pHookInfo(LpMap)^.HookKeyHandle, nCode, wPar, lPar);
+    CallNextHookEx(pHookInfo(LpMap)^.HookKeyHandle, nCode, wPar, lPar);
+    if FKeyApplicationList.KeyConvert(nCode, wPar, lPar) then
       // 押されたキーがコントロールキーとして登録されている時はキーの表示を禁止する
-      Result := -1;
-    end;
+      Result := -1
+    else
+      Result := 0;
     ProcSaveKeyAppListToMemMappedFile;
     UnMapFileMemory(LMapWnd, LpMap);
   end;

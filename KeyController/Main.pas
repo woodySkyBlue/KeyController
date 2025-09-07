@@ -21,11 +21,11 @@ type
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     function ProcStrToState(S: string): TModifierState;
     procedure ProcSetKeyController(S: string; aController: TKeyController);
     procedure ProcSetKeyControllerList(aList: TStringList; aApplicationList: TkeyApplicationList);
-    procedure ProcSetKeyApplicationList(aFileName: string; aApplicationList: TkeyApplicationList);
     procedure ProcLoadKeyControlInfo;
   public
     { Public 宣言 }
@@ -113,12 +113,20 @@ var
 begin
   var FKeyApplicationList := TkeyApplicationList.Create;
   try
+    // アプリケーション配置パス内のTEXTファイルからキー変換情報を読み込みKeyApplicationListに格納する
     var FFileList := TDirectory.GetFiles(ExtractFilePath(Application.ExeName));
     for FName in FFileList do begin
-      if TPath.GetExtension(FName) = '.txt' then
-        // アプリケーションパス内のTEXTファイルからキー変換情報を読み込む
-        ProcSetKeyApplicationList(FName, FKeyApplicationList);
+      if TPath.GetExtension(FName) = '.txt' then begin
+        var FList := TStringList.Create;
+        try
+          FList.LoadFromFile(FName);
+          ProcSetKeyControllerList(FList, FKeyApplicationList);
+        finally
+          FreeAndNil(FList);
+        end;
+      end;
     end;
+    // KeyApplicationListの内容を
     var FStream := TMemoryStream.Create;
     try
       FKeyApplicationList.SaveToStream(FStream);
@@ -131,17 +139,6 @@ begin
   end;
 end;
 
-procedure TFormMain.ProcSetKeyApplicationList(aFileName: string; aApplicationList: TkeyApplicationList);
-begin
-  var FList := TStringList.Create;
-  try
-    FList.LoadFromFile(aFileName);
-    ProcSetKeyControllerList(FList, aApplicationList);
-  finally
-    FreeAndNil(FList);
-  end;
-end;
-
 procedure TFormMain.FormCreate(Sender: TObject);
 begin
   ReportMemoryLeaksOnShutdown := True;
@@ -151,9 +148,14 @@ begin
   ProcLoadKeyControlInfo;
 end;
 
-procedure TFormMain.FormDestroy(Sender: TObject);
+procedure TFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   StopKeyHook;
+end;
+
+procedure TFormMain.FormDestroy(Sender: TObject);
+begin
+  //StopKeyHook;
 end;
 
 procedure TFormMain.Button1Click(Sender: TObject);

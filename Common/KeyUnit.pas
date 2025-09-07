@@ -21,25 +21,23 @@ type
 
   TKeyController = class
   private
-    FActive: Boolean;
     FControlKey: TKeyCombination;
     FOperationKeyList: TList<TKeyCombination>;
     function GetControlKey: TKeyCombination;
     function GetOperationKey(Index: Integer): TKeyCombination;
     procedure SetControlKey(const Value: TKeyCombination);
     procedure SetOperationKey(Index: Integer; const Value: TKeyCombination);
-    procedure ProcKeyUp(aKey: Byte; var aCount: Integer);
-    procedure ProcKeyDown(aKey: Byte; var aCount: Integer);
-    procedure ProcModifierKeyUp(aState: TModifierState; var aCount: Integer);
-    procedure ProcModifierKeyDown(aState: TModifierState; var aCount: Integer);
+    procedure ProcKeyUp(aKey: Byte);
+    procedure ProcKeyDown(aKey: Byte);
+    procedure ProcModifierKeyUp(aState: TModifierState);
+    procedure ProcModifierKeyDown(aState: TModifierState);
     procedure ProcWriteModifierStateToStream(aState: TModifierState; aStream: TStream);
     procedure ProcReadModifierStateFromStream(out aState: TModifierState; aStream: TStream);
   public
     constructor Create;
     destructor Destroy; override;
     function OperationKeyCount: Integer;
-    function KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aCount: Integer): Boolean;
-    //function KeyConvert(aKey: Byte; aState: TModifierState): Boolean;
+    function KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aTime: UInt64): Boolean;
     procedure Assigne(aSource: TKeyController);
     procedure Clear;
     procedure AddOperationKey(aCombinationKey: TKeyCombination);
@@ -48,7 +46,6 @@ type
     procedure SaveToStream(aStream: TStream);
     property ControlKey: TKeyCombination read GetControlKey write SetControlKey;
     property OperationKey[Index: Integer]: TKeyCombination read GetOperationKey write SetOperationKey;
-    property Active: Boolean read FActive;
   end;
 
   TKeyControllerList = class
@@ -59,8 +56,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function Count: Integer;
-    //function KeyConvert(aKey: Byte; aState: TModifierState): Boolean;
-    function KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aCount: Integer): Boolean;
+    function KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aTime: UInt64): Boolean;
     procedure Add(aKeyController: TKeyController);
     procedure Assign(aSource: TKeyControllerList);
     procedure Clear;
@@ -105,6 +101,7 @@ type
 
   TkeyApplicationList = class
   private
+    FTime: UInt64;
     //FMaskKey: Byte;
     //FIsMask: Boolean;
     //FModifierState: TModifierState;
@@ -136,7 +133,6 @@ uses System.SysUtils, UnitUtils;
 
 constructor TKeyController.Create;
 begin
-  Self.FActive := False;
   Self.FControlKey.Key := 0;
   Self.FControlKey.State := [];
   FOperationKeyList := TList<TKeyCombination>.Create;
@@ -216,64 +212,49 @@ begin
   aStream.WriteBuffer(FState, SizeOf(FState));
 end;
 
-procedure TKeyController.ProcKeyDown(aKey: Byte; var aCount: Integer);
+procedure TKeyController.ProcKeyDown(aKey: Byte);
 begin
   //WriteDebugLogFile('C:\temp\log.txt', Format('KeyDown %d', [aKey]));
   keybd_event(aKey, MapVirtualKey(aKey, 0),  0, 0);
-  inc(aCount);
 end;
 
-procedure TKeyController.ProcKeyUp(aKey: Byte; var aCount: Integer);
+procedure TKeyController.ProcKeyUp(aKey: Byte);
 begin
   //WriteDebugLogFile('C:\temp\log.txt', Format('KeyUp %d', [aKey]));
   keybd_event(aKey, MapVirtualKey(aKey, 0),  KEYEVENTF_KEYUP, 0);
-  inc(aCount);
 end;
 
-procedure TKeyController.ProcModifierKeyUp(aState: TModifierState; var aCount: Integer);
+procedure TKeyController.ProcModifierKeyUp(aState: TModifierState);
 begin
-  if tksShift in aState then ProcKeyUp(VK_SHIFT, aCount);
-  if tksCtrl in aState then ProcKeyUp(VK_CONTROL, aCount);
-  if tksNonConvert in aState then ProcKeyUp(VK_NONCONVERT, aCount);
+  if tksShift in aState then ProcKeyUp(VK_SHIFT);
+  if tksCtrl in aState then ProcKeyUp(VK_CONTROL);
+  if tksNonConvert in aState then ProcKeyUp(VK_NONCONVERT);
 end;
 
-procedure TKeyController.ProcModifierKeyDown(aState: TModifierState; var aCount: Integer);
+procedure TKeyController.ProcModifierKeyDown(aState: TModifierState);
 begin
-  if tksShift in aState then ProcKeyDown(VK_SHIFT, aCount);
-  if tksCtrl in aState then ProcKeyDown(VK_CONTROL, aCount);
-  if tksNonConvert in aState then ProcKeyDown(VK_NONCONVERT, aCount);
+  if tksShift in aState then ProcKeyDown(VK_SHIFT);
+  if tksCtrl in aState then ProcKeyDown(VK_CONTROL);
+  if tksNonConvert in aState then ProcKeyDown(VK_NONCONVERT);
 end;
 
-function TKeyController.KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aCount: Integer): Boolean;
-//function TKeyController.KeyConvert(aKey: Byte; aState: TModifierState): Boolean;
-
-  procedure _Log(var S: string; aState: TModifierState);
-  begin
-    if tksShift in aState then S := S + 'shift:ON, ';
-    if tksCtrl in aState then S := S + 'ctrl:ON, ';
-    if tksNonConvert in aState then S := S + 'convert:ON';
-    //WriteDebugLogFile('C:\temp\log.txt', S + ')');
-  end;
-
+function TKeyController.KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aTime: UInt64): Boolean;
 begin
   Result := False;
-  //var S := Format('Key=%d FControlKey=%d, (', [aCombination.Key, FControlKey.Key]);
-  //_Log(S, aCombination.State);
-  //if (aState = Self.FControlKey.State) and (aKey = Self.FControlKey.Key) then begin
   if (aCombination.State = Self.FControlKey.State) and (aCombination.Key = Self.FControlKey.Key) then begin
     // アプリケーションで押された「修飾キー」＋「コントロールキー」が登録されているとき
-    Self.FActive := True;
-    //if aKeyInfo.IsPressed and not aKeyInfo.IsRepeat then
-      ProcModifierKeyUp(aCombination.State, aCount);
-    for var Cnt := 0 to OperationKeyCount-1 do begin
-      ProcModifierKeyDown(OperationKey[Cnt].State, aCount);
-      ProcKeyDown(OperationKey[Cnt].Key, aCount);
-      ProcKeyUp(OperationKey[Cnt].Key, aCount);
-      ProcModifierKeyUp(OperationKey[Cnt].State, aCount);
+    var FGetTime := GetTickCount64;
+    if (FGetTime - aTime) > 50 then begin
+      ProcModifierKeyUp(aCombination.State);
+      for var Cnt := 0 to OperationKeyCount-1 do begin
+        ProcModifierKeyDown(OperationKey[Cnt].State);
+        ProcKeyDown(OperationKey[Cnt].Key);
+        ProcKeyUp(OperationKey[Cnt].Key);
+        ProcModifierKeyUp(OperationKey[Cnt].State);
+      end;
+      ProcModifierKeyDown(aCombination.State);
+      aTime := FGetTime;
     end;
-    //if not aKeyInfo.IsPressed and aKeyInfo.IsRepeat then
-      ProcModifierKeyDown(aCombination.State, aCount);
-    Self.FActive := False;
     Result := True;
   end;
 end;
@@ -356,13 +337,12 @@ begin
   Result := Self.FKeyControllerList.Count;
 end;
 
-function TKeyControllerList.KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aCount: Integer): Boolean;
-//function TKeyControllerList.KeyConvert(aKey: Byte; aState: TModifierState): Boolean;
+function TKeyControllerList.KeyConvert(aCombination: TKeyCombination; aKeyInfo: TKeyInfo; var aTime: UInt64): Boolean;
 begin
   // アプリケーションに登録されている
   Result := False;
   for var Cnt := 0 to Self.Count-1 do begin
-    if Self.FKeyControllerList.Items[Cnt].KeyConvert(aCombination, aKeyInfo, aCount) then begin
+    if Self.FKeyControllerList.Items[Cnt].KeyConvert(aCombination, aKeyInfo, aTime) then begin
       Result := True;
       Exit;
     end;
@@ -528,9 +508,7 @@ end;
 
 constructor TkeyApplicationList.Create;
 begin
-//  Self.FMaskKey := 0;
-//  Self.FIsMask := False;
-//  Self.FModifierState := [];
+  Self.FTime := 0;
   Self.FKeyCondition.Initialize;
   Self.FKeyApplicationList := TList<TKeyApplication>.Create;
 end;
@@ -581,23 +559,6 @@ begin
   end;
 end;
 
-//procedure TkeyApplicationList.ProcSetModifierKey(aIsKeyPressed: Boolean; akey: TModifierState);
-//begin
-//  if aIsKeyPressed then
-//    FModifierState := FModifierState + aKey  // Include(FModifierState, akey)
-//  else
-//    FModifierState := FModifierState - aKey; // Exclude(FModifierState, akey)
-//end;
-
-//procedure TkeyApplicationList.ProcUpdateModifierKey(aKey: Integer; aIsKeyPressed: Boolean);
-//begin
-//  case aKey of
-//    VK_CONTROL: ProcSetModifierKey(aIsKeyPressed, [tksCtrl]);
-//    VK_SHIFT: ProcSetModifierKey(aIsKeyPressed, [tksShift]);
-//    VK_NONCONVERT: ProcSetModifierKey(aIsKeyPressed, [tksNonConvert]);
-//  end;
-//end;
-
 function TkeyApplicationList.KeyConvert(aCode: Integer; wPar: WPARAM; lPar: LPARAM): Boolean;
 
   function IntToBin(x: Integer): string;
@@ -624,18 +585,10 @@ begin
       //      , [FormatDateTime('hh:ss.zz', Now), wPar, BoolToStr(FKeyCondition.IsPressed, True), IntToBin(lPar)]));
       var FCount := 0;
       if FKeyCondition.IsPressed
-          and Self.Items[Cnt].KeyControllerList.KeyConvert(FKeyCondition.KeyCombination, FKeyCondition.Info, FCount) then begin
+          and Self.Items[Cnt].KeyControllerList.KeyConvert(FKeyCondition.KeyCombination, FKeyCondition.Info, FTime) then begin
         Result := True;
         Exit;
       end;
-
-
-//      if FKeyCondition.IsExecuted
-//          and Self.Items[Cnt].KeyControllerList.KeyConvert(FKeyCondition.KeyCombination, FCount) then begin
-//        FKeyCondition.StartMask(FCount);
-//        Result := True;
-//        Exit;
-//      end;
     end;
   end;
 end;
@@ -647,7 +600,6 @@ var
 begin
   var FState := Self.FKeyCondition.ModifierState;
   aStream.ReadBuffer(FState, SizeOf(FState));
-  //aStream.ReadBuffer(Self.FKeyCondition.ModifierState, SizeOf(Self.FKeyCondition.ModifierState));
   aStream.ReadBuffer(FCount, SizeOf(FCount));
   for var Cnt := 0 to FCount-1 do begin
     F.ClassName := ReadStreamString(aStream);
@@ -664,7 +616,6 @@ var
 begin
   var FState := Self.FKeyCondition.ModifierState;
   aStream.WriteBuffer(FState, SizeOf(FState));
-  //aStream.WriteBuffer(Self.FModifierState, SizeOf(Self.FModifierState));
   FCount := Self.Count;
   aStream.WriteBuffer(FCount, SizeOf(FCount));
   for var Cnt := 0 to FCount-1 do begin

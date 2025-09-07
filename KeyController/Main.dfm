@@ -14,6 +14,7 @@ object FormMain: TFormMain
   Font.Height = -18
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 144
